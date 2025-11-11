@@ -29,6 +29,7 @@ export function BacktestChart({
   showVolume = true,
 }: BacktestChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
+  const chartInstanceRef = useRef<any>(null)
 
   // 數據驗證和過濾
   const validStockData = React.useMemo(() => {
@@ -78,45 +79,48 @@ export function BacktestChart({
       return
     }
 
-    // 調試信息 - 檢查傳入的數據
-    console.log('BacktestChart 數據調試:', {
-      stockDataLength: validStockData.length,
-      signalsLength: signals.length,
-      llmDecisionsLength: llmDecisions.length,
-      firstSignal: signals[0],
-      firstLLMDecision: llmDecisions[0],
-      stockDataSample: validStockData.slice(0, 2)
-    })
+    // Add a small delay to ensure DOM is fully settled (React 19 compatibility)
+    const timeoutId = setTimeout(() => {
+      if (!chartContainerRef.current) return
 
-    // 清空容器
-    chartContainerRef.current.innerHTML = ''
+      // 調試信息 - 檢查傳入的數據
+      console.log('BacktestChart 數據調試:', {
+        stockDataLength: validStockData.length,
+        signalsLength: signals.length,
+        llmDecisionsLength: llmDecisions.length,
+        firstSignal: signals[0],
+        firstLLMDecision: llmDecisions[0],
+        stockDataSample: validStockData.slice(0, 2)
+      })
 
-    // 創建圖表容器
-    const chartContainer = document.createElement('div')
-    chartContainer.style.height = `${height}px`
-    chartContainerRef.current.appendChild(chartContainer)
+      // 使用現有的容器節點，避免在嚴格模式下反覆插入/移除造成的 DOM 錯誤
+      const container = chartContainerRef.current
+      container.style.height = `${height}px`
 
-    // 創建圖表
-    const chart = createChart(chartContainer, {
-      width: chartContainerRef.current.clientWidth,
-      height: height,
-      layout: {
-        backgroundColor: '#ffffff',
-        textColor: '#333',
-      },
-      grid: {
-        vertLines: { color: '#f0f0f0' },
-        horzLines: { color: '#f0f0f0' },
-      },
-      rightPriceScale: {
-        borderColor: '#cccccc',
-      },
-      timeScale: {
-        borderColor: '#cccccc',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    })
+      // 創建圖表
+      const chart = createChart(container, {
+        width: container.clientWidth,
+        height: height,
+        layout: {
+          backgroundColor: '#ffffff',
+          textColor: '#333',
+        },
+        grid: {
+          vertLines: { color: '#f0f0f0' },
+          horzLines: { color: '#f0f0f0' },
+        },
+        rightPriceScale: {
+          borderColor: '#cccccc',
+        },
+        timeScale: {
+          borderColor: '#cccccc',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      })
+      
+      // Store chart instance for cleanup
+      chartInstanceRef.current = chart
 
     // K線數據
     const candlestickData = validStockData.map(stock => ({
@@ -302,18 +306,40 @@ export function BacktestChart({
 
     // 響應式調整
     const handleResize = () => {
-      if (chartContainerRef.current) {
+      if (container && container.isConnected) {
         chart.applyOptions({
-          width: chartContainerRef.current.clientWidth,
+          width: container.clientWidth,
         })
       }
     }
 
-    window.addEventListener('resize', handleResize)
+      window.addEventListener('resize', handleResize)
+      
+      // Return cleanup function for this chart instance
+      return () => {
+        window.removeEventListener('resize', handleResize)
+        if (chartInstanceRef.current) {
+          try {
+            chartInstanceRef.current.remove()
+            chartInstanceRef.current = null
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+      }
+    }, 0) // Small delay to let React finish DOM operations
 
     return () => {
-      window.removeEventListener('resize', handleResize)
-      chart.remove()
+      clearTimeout(timeoutId)
+      // Also cleanup chart if timeout hasn't run yet
+      if (chartInstanceRef.current) {
+        try {
+          chartInstanceRef.current.remove()
+          chartInstanceRef.current = null
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     }
   }, [validStockData, signals, llmDecisions, height, showVolume])
 

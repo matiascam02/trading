@@ -1,13 +1,19 @@
 'use client'
 
 import React from 'react'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Calendar, BarChart3, Brain, Info } from 'lucide-react'
 import { BacktestResult } from '@/types'
-import { BacktestChart } from '@/components/charts/BacktestChart'
 import DayAnalysis from './DayAnalysis'
+
+// Dynamically import BacktestChart to avoid SSR issues with lightweight-charts
+const BacktestChart = dynamic(
+  () => import('@/components/charts/BacktestChart').then(mod => ({ default: mod.BacktestChart })),
+  { ssr: false, loading: () => <div className="h-[500px] flex items-center justify-center">Loading chart...</div> }
+)
 
 interface BacktestResultsWithAnalysisProps {
   backtestResult: BacktestResult
@@ -166,7 +172,7 @@ export default function BacktestResultsWithAnalysis({
         </CardContent>
       </Card>
 
-      {/* Price Chart Section */}
+      {/* Price Chart Section - Temporarily disabled due to lightweight-charts compatibility */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -175,13 +181,12 @@ export default function BacktestResultsWithAnalysis({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <BacktestChart 
-            stockData={backtestResult.stock_data || []}
-            signals={backtestResult.signals || []}
-            llmDecisions={backtestResult.llm_decisions || []}
-            height={500}
-            showVolume={true}
-          />
+          <div className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <p className="text-gray-600 mb-2">Chart temporarily disabled</p>
+              <p className="text-sm text-gray-500">Check stats above for results</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

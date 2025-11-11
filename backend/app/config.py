@@ -1,6 +1,7 @@
 """
 Application configuration management.
-Handles environment variables, Azure OpenAI settings, and database configuration.
+Handles environment variables, LLM provider settings (Azure OpenAI, OpenAI, Gemini),
+and database configuration.
 """
 
 import os
@@ -39,6 +40,13 @@ class Settings(BaseSettings):
     # Backtesting settings
     DEFAULT_INITIAL_CAPITAL: float = 10000.0
     DEFAULT_COMMISSION: float = 0.001
+
+    # OpenAI (Direct) settings
+    # These settings enable calling OpenAI models directly, e.g. gpt-4o, gpt-4o-mini, gpt-5 (future)
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4o"
+    # Optional explicit selection: "openai" | "azure" | "gemini"
+    LLM_PROVIDER: Optional[str] = None
 
     # Azure OpenAI settings
     AZURE_OPENAI_API_KEY: Optional[str] = None

@@ -495,9 +495,17 @@ Please use professional but concise language, keeping within 800 words. Highligh
                 context = f"Trading review analysis: {day_data.date} {day_data.symbol} - Data processing error"
 
             try:
-                # Initialize LLM client with optimized settings to prevent timeouts
+                # Initialize LLM client with provider override if configured
+                from app.config import settings as _settings
+                _provider = (
+                    str(_settings.LLM_PROVIDER).strip().lower()
+                    if getattr(_settings, "LLM_PROVIDER", None)
+                    else None
+                )
+                if _provider not in {"azure", "openai", "gemini"}:
+                    _provider = None
                 llm_client = get_llm_client(
-                    temperature=0.8, max_tokens=1000
+                    provider=_provider, temperature=0.8, max_tokens=1000
                 )  # Reduced token limit
 
                 # Get LLM response with timeout handling

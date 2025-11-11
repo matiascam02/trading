@@ -61,15 +61,33 @@ Copy and configure your `.env` file:
 cp .env.example .env
 ```
 
-**Switch LLM Provider**: Edit `.env` and comment/uncomment the API keys:
-```env
-# Use Azure OpenAI (default)
-AZURE_OPENAI_API_KEY=your_key
-# GOOGLE_API_KEY=your_key  # comment out
+**Provider Selection (Auto-detect):** The backend picks the first available provider by key presence:
+1) Azure OpenAI → `AZURE_OPENAI_API_KEY`
+2) OpenAI (Direct) → `OPENAI_API_KEY`
+3) Google Gemini → `GOOGLE_API_KEY`
 
-# Use Google Gemini instead
-# AZURE_OPENAI_API_KEY=your_key  # comment out  
-GOOGLE_API_KEY=your_key
+Comment out keys to disable a provider.
+
+Example configurations:
+
+```env
+# ----- Use OpenAI (direct) -----
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o  # can be gpt-4o-mini, or gpt-5 when available
+```
+
+```env
+# ----- Use Azure OpenAI -----
+AZURE_OPENAI_API_KEY=your_azure_key
+AZURE_OPENAI_ENDPOINT=https://your-azure-openai-endpoint
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4.1
+```
+
+```env
+# ----- Use Google Gemini -----
+GOOGLE_API_KEY=your_gemini_key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ### Development Mode

@@ -335,11 +335,10 @@ async def stream_llm_backtest(
         # 返回 SSE 響應
         return StreamingResponse(
             generate_backtest_stream(),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Content-Type": "text/event-stream",
             },
         )
 

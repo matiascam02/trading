@@ -243,7 +243,16 @@ async def generate_daily_improvement_analysis(
 """
 
         # 獲取LLM回應
-        llm_client = get_llm_client(temperature=0.7, max_tokens=1500)
+        # Respect provider override if configured
+        from app.config import settings as _settings
+        _provider = (
+            str(_settings.LLM_PROVIDER).strip().lower()
+            if getattr(_settings, "LLM_PROVIDER", None)
+            else None
+        )
+        if _provider not in {"azure", "openai", "gemini"}:
+            _provider = None
+        llm_client = get_llm_client(provider=_provider, temperature=0.7, max_tokens=1500)
         response = llm_client.invoke(context)
         response_text = (
             response.content if hasattr(response, "content") else str(response)

@@ -19,6 +19,7 @@ from ...utils.unrealized_pnl_tracker import UnrealizedPnLTracker
 from ..analysis.enhanced_technical_analyzer import EnhancedTechnicalAnalyzer
 from ..analysis.trend_analyzer import EnhancedTrendAnalyzer
 from ..client import get_llm_client
+from ...config import settings
 from .base import (
     ParameterSpec,
     ParameterType,
@@ -43,7 +44,15 @@ class LLMSmartStrategy(TradingStrategy):
 
     def __init__(self, config: StrategyConfig):
         super().__init__(config)
-        self.llm_client = get_llm_client(temperature=0.1)
+        # Respect explicit provider override if set (e.g., LLM_PROVIDER=openai)
+        provider_override = (
+            str(settings.LLM_PROVIDER).strip().lower()
+            if getattr(settings, "LLM_PROVIDER", None)
+            else None
+        )
+        if provider_override not in {"azure", "openai", "gemini", None}:
+            provider_override = None
+        self.llm_client = get_llm_client(provider=provider_override, temperature=0.1)
         self.trend_analyzer = EnhancedTrendAnalyzer()
         self.enhanced_analyzer = EnhancedTechnicalAnalyzer()
 

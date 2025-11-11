@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  reactStrictMode: false, // Disable to prevent DOM manipulation errors in dev
   typescript: {
     // Skip TypeScript errors during build
     ignoreBuildErrors: true

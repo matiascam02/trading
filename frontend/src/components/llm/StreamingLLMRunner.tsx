@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,9 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Play, Square, TrendingUp, BarChart3, Zap } from 'lucide-react'
-import { BacktestChart } from '@/components/charts/BacktestChart'
-import BacktestResultsWithAnalysis from '@/components/analysis/BacktestResultsWithAnalysis'
+// Removed lucide-react icons due to React 19 compatibility issues
+// Using Unicode symbols instead
+const BacktestResultsWithAnalysis = dynamic(
+  () => import('@/components/analysis/BacktestResultsWithAnalysis'),
+  { ssr: false }
+)
 
 interface StreamMessage {
   type: 'start' | 'progress' | 'trading_progress' | 'result' | 'complete' | 'error'
@@ -202,7 +206,8 @@ export default function StreamingLLMRunner() {
       session_id: sessionId, // 添加會話 ID
     })
 
-    const url = `http://localhost:8000/api/v1/llm-stream/llm-backtest-stream?${params}`
+    // 使用 Next.js 重寫規則代理到後端，避免跨域與開發覆蓋層問題
+    const url = `/api/v1/llm-stream/llm-backtest-stream?${params}`
     
     try {
       console.log('創建新的 EventSource:', url)
@@ -456,7 +461,7 @@ export default function StreamingLLMRunner() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
+            <span className="text-lg">📊</span>
             回測參數設置
           </CardTitle>
         </CardHeader>
@@ -504,12 +509,12 @@ export default function StreamingLLMRunner() {
             >
               {(isRunning || isStarting) ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   {isStarting ? '正在啟動...' : '回測進行中...'}
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-4 w-4" />
+                  <span className="mr-2">▶</span>
                   開始串流回測
                 </>
               )}
@@ -517,7 +522,7 @@ export default function StreamingLLMRunner() {
             
             {(isRunning || isStarting) && (
               <Button onClick={stopStreaming} variant="destructive">
-                <Square className="mr-2 h-4 w-4" />
+                <span className="mr-2">⏹</span>
                 停止
               </Button>
             )}
@@ -530,7 +535,7 @@ export default function StreamingLLMRunner() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
+              <span className="text-lg">⚡</span>
               即時進度與績效
             </CardTitle>
           </CardHeader>
@@ -576,7 +581,7 @@ export default function StreamingLLMRunner() {
               {pnlStatus && (
                 <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
                   <div className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-base">📈</span>
                     當前交易狀態
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -622,7 +627,7 @@ export default function StreamingLLMRunner() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <span className="text-lg">📈</span>
             即時決策日誌
           </CardTitle>
         </CardHeader>

@@ -1,7 +1,12 @@
 # Installation commands
-install:
+.venv:
+	@echo "Creating Python virtual environment (.venv) with uv..."
+	@uv venv --python 3.12
+	@echo "Virtual environment created at .venv"
+
+install: .venv
 	@echo "Installing dependencies..."
-	@echo "Installing Python dependencies..."
+	@echo "Installing Python dependencies into .venv..."
 	@uv sync
 	@echo "Installing Node.js dependencies..."
 	@cd frontend && npm install
@@ -10,7 +15,7 @@ install:
 run:
 	@echo "Starting LLM Agent Trader..."
 	@echo "Starting backend server..."
-	@cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
+	@uv run uvicorn app.main:app --app-dir backend --reload --reload-exclude '.venv/*' --host 0.0.0.0 --port 8000 &
 	@sleep 3
 	@echo "Starting frontend server..."
 	@cd frontend && npm run dev &
