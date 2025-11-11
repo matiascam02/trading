@@ -69,16 +69,16 @@ interface StreamMessage {
 }
 
 interface DynamicPerformance {
-  total_return: number     // 總回報率（基於總價值）
-  win_rate: number         // 勝率 (0-1)
-  max_drawdown: number     // 最大回撤 (0-1)
-  total_trades: number     // 完成的交易次數（有意義）
-  total_realized_pnl?: number      // 累積實現損益
-  cumulative_trade_return_rate?: number  // 累積交易收益率
-  // 未來可添加：
-  // avg_trade_return?: number    // 平均每筆交易收益率
-  // profit_loss_ratio?: number   // 盈虧比
-  // max_single_loss?: number     // 最大單筆虧損
+  total_return: number     // Total return rate (based on total value)
+  win_rate: number         // Win rate (0-1)
+  max_drawdown: number     // Maximum drawdown (0-1)
+  total_trades: number     // Number of completed trades
+  total_realized_pnl?: number      // Cumulative realized P&L
+  cumulative_trade_return_rate?: number  // Cumulative trade return rate
+  // Future additions:
+  // avg_trade_return?: number    // Average trade return
+  // profit_loss_ratio?: number   // Profit/loss ratio
+  // max_single_loss?: number     // Maximum single loss
 }
 
 interface PnLStatus {
@@ -111,7 +111,7 @@ interface BacktestResult {
 export default function StreamingLLMRunner() {
   const [symbol, setSymbol] = useState('AAPL')
   const [period, setPeriod] = useState('1y')
-  const [initialCapital] = useState(100000000) // 設置1億作為無上限資金，不影響純交易損益計算
+  const [initialCapital] = useState(100000000) // Set 100M as unlimited capital, doesn't affect pure trading P&L calculation
   
   const [isRunning, setIsRunning] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -119,10 +119,10 @@ export default function StreamingLLMRunner() {
   const [messages, setMessages] = useState<string[]>([])
   const [result, setResult] = useState<BacktestResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isStarting, setIsStarting] = useState(false) // 新增：防止重複點擊
-  const [currentRunId, setCurrentRunId] = useState<string | null>(null) // 新增：追踪當前回測的唯一標識
+  const [isStarting, setIsStarting] = useState(false) // Prevent duplicate clicks
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null) // Track current backtest unique ID
   
-  // 動態績效狀態
+  // Dynamic performance state
   const [dynamicPerformance, setDynamicPerformance] = useState<DynamicPerformance>({
     total_return: 0,
     win_rate: 0,
@@ -130,29 +130,29 @@ export default function StreamingLLMRunner() {
     total_trades: 0
   })
   
-  // P&L狀態
+  // P&L status
   const [pnlStatus, setPnlStatus] = useState<PnLStatus | null>(null)
   
-  // 實時信號收集
+  // Real-time signal collection
   const [realTimeSignals, setRealTimeSignals] = useState<any[]>([])
   const [realTimeLLMDecisions, setRealTimeLLMDecisions] = useState<any[]>([])
   const [realTimeStockData, setRealTimeStockData] = useState<any[]>([])
   
   const eventSourceRef = useRef<EventSource | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const sessionIdRef = useRef<string | null>(null) // 添加會話 ID
+  const sessionIdRef = useRef<string | null>(null) // Session ID
 
-  // 清理函數 - 確保 EventSource 正確關閉
+  // Cleanup function - ensure EventSource properly closed
   const cleanupEventSource = useCallback(() => {
     if (eventSourceRef.current) {
-      console.log('清理 EventSource 連接')
+      console.log('Cleaning up EventSource connection')
       eventSourceRef.current.close()
       eventSourceRef.current = null
     }
     sessionIdRef.current = null
   }, [])
 
-  // 組件卸載時清理
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
       cleanupEventSource()
@@ -169,22 +169,22 @@ export default function StreamingLLMRunner() {
   }, [])
 
   const startStreaming = async () => {
-    // 防止重複點擊
+    // Prevent duplicate clicks
     if (isRunning || isStarting) {
-      console.log('回測已在進行中，忽略重複請求')
+      console.log('Backtest already in progress, ignoring duplicate request')
       return
     }
 
-    // 生成唯一的會話 ID 和 runId
+    // Generate unique session ID and runId
     const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const runId = `run-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     sessionIdRef.current = sessionId
     setCurrentRunId(runId)
-    console.log('開始新的串流回測，會話 ID:', sessionId, 'Run ID:', runId)
+    console.log('Starting new streaming backtest, Session ID:', sessionId, 'Run ID:', runId)
     
     setIsStarting(true)
     
-    // 先清理之前的連接
+    // Clean up previous connection first
     cleanupEventSource()
 
     setIsRunning(true)
@@ -193,9 +193,9 @@ export default function StreamingLLMRunner() {
     setMessages([])
     setResult(null)
     setError(null)
-    setPnlStatus(null) // 重置P&L狀態
+    setPnlStatus(null) // Reset P&L status
     
-    // 重置實時信號數據
+    // Reset real-time signal data
     setRealTimeSignals([])
     setRealTimeLLMDecisions([])
     setRealTimeStockData([])
@@ -203,29 +203,29 @@ export default function StreamingLLMRunner() {
     const params = new URLSearchParams({
       symbol,
       period,
-      session_id: sessionId, // 添加會話 ID
+      session_id: sessionId, // Add session ID
     })
 
-    // 使用 Next.js 重寫規則代理到後端，避免跨域與開發覆蓋層問題
+    // Use Next.js rewrite rules to proxy to backend, avoiding CORS and dev overlay issues
     const url = `/api/v1/llm-stream/llm-backtest-stream?${params}`
     
     try {
-      console.log('創建新的 EventSource:', url)
+      console.log('Creating new EventSource:', url)
       eventSourceRef.current = new EventSource(url)
       
       eventSourceRef.current.onopen = () => {
-        console.log('EventSource 連接已建立')
+        console.log('EventSource connection established')
         setIsStarting(false)
       }
       
       eventSourceRef.current.onmessage = (event) => {
         try {
           const data: StreamMessage = JSON.parse(event.data)
-          console.log('收到串流數據:', data.type, data.event_type, data.message)
+          console.log('Received stream data:', data.type, data.event_type, data.message)
           
-          // 調試：檢查performance_update事件
+          // Debug: check performance_update events
           if (data.event_type === 'performance_update') {
-            console.log('Performance Update詳細數據:', {
+            console.log('Performance Update detailed data:', {
               performance_metrics: data.performance_metrics,
               extra_data: data.extra_data,
               message: data.message
@@ -234,18 +234,18 @@ export default function StreamingLLMRunner() {
           
           switch (data.type) {
             case 'start':
-              addMessage(data.message || '開始回測...')
+              addMessage(data.message || 'Starting backtest...')
               break
               
             case 'progress':
               setCurrentStep(data.message || '')
-              // 只顯示重要的進度訊息，過濾內部處理訊息
+              // Only show important progress messages, filter internal processing messages
               const progressMessage = data.message || ''
-              if (!progressMessage.includes('正在獲取') && 
-                  !progressMessage.includes('成功獲取') && 
-                  !progressMessage.includes('初始化') &&
-                  !progressMessage.includes('開始執行') &&
-                  !progressMessage.includes('分析回測結果')) {
+              if (!progressMessage.includes('Fetching') && 
+                  !progressMessage.includes('Successfully fetched') && 
+                  !progressMessage.includes('Initializing') &&
+                  !progressMessage.includes('Starting execution') &&
+                  !progressMessage.includes('Analyzing backtest results')) {
                 addMessage(progressMessage)
               }
               break
@@ -255,10 +255,10 @@ export default function StreamingLLMRunner() {
                   const progressPercent = (data.day / data.total_days) * 100
                   setProgress(progressPercent)
                   
-                  // 統一處理P&L數據更新 - 在所有事件類型前先更新
+                  // Unified P&L data update - update before all event types
                   let pnlData = data.extra_data?.pnl_status || data.pnl_status
                   if (pnlData) {
-                    console.log('更新P&L狀態:', {
+                    console.log('Updating P&L status:', {
                       event_type: data.event_type,
                       holding_days: pnlData.holding_days,
                       unrealized_pnl: pnlData.unrealized_pnl,
@@ -269,17 +269,17 @@ export default function StreamingLLMRunner() {
                   }
                   
                   if (data.event_type === 'llm_decision') {
-                    // 保留完整的LLM決策內容，便於後續優化分析
+                    // Keep full LLM decision content for subsequent optimization analysis
                     const message = data.message || ''
                     addMessage(`🤖 ${message}`)
                     
-                    // 收集LLM決策數據
+                    // Collect LLM decision data
                     if (data.extra_data) {
                       const llmDecision = {
                         date: new Date().toISOString(),
                         day: data.day,
                         decision: {
-                          action: 'THINK', // LLM思考但不是買賣信號
+                          action: 'THINK', // LLM thinking but not buy/sell signal
                           confidence: 0.8,
                           reason: message
                         },
@@ -289,16 +289,16 @@ export default function StreamingLLMRunner() {
                       setRealTimeLLMDecisions(prev => [...prev, llmDecision])
                     }
                   } else if (data.event_type === 'signal_generated') {
-                    // 優化信號生成顯示
+                    // Optimize signal generation display
                     const message = data.message || ''
-                    const signalMatch = message.match(/(BUY|SELL).*?信心度: ([\d.]+)/)
+                    const signalMatch = message.match(/(BUY|SELL).*?(?:信心度|Confidence): ([\d.]+)/)
                     if (signalMatch) {
                       const signal = signalMatch[1]
                       const confidence = signalMatch[2]
                       const icon = signal === 'BUY' ? '🚀' : '📤'
-                      addMessage(`${icon} 執行 ${signal} 信號 (信心度: ${confidence})`)
+                      addMessage(`${icon} Execute ${signal} Signal (Confidence: ${confidence})`)
                       
-                      // 收集交易信號數據
+                      // Collect trading signal data
                       const tradingSignal = {
                         timestamp: new Date().toISOString(),
                         signal_type: signal,
@@ -311,7 +311,7 @@ export default function StreamingLLMRunner() {
                       addMessage(`📈 ${message}`)
                     }
                     
-                    // 靜默更新績效數據，不重複顯示訊息（P&L數據已在上方統一更新）
+                    // Silently update performance data, don't repeat messages (P&L data already updated above)
                     let signalMetrics = data.extra_data?.performance_metrics || (data as any).performance_metrics
                     let strategyStats = (data as any).strategy_statistics || (data.extra_data as any)?.strategy_statistics
                     
@@ -326,14 +326,14 @@ export default function StreamingLLMRunner() {
                       })
                     }
                   } else if (data.event_type === 'llm_skipped') {
-                    // 跳過不重要的訊息，減少日誌雜訊
+                    // Skip unimportant messages, reduce log noise
                     // addMessage(`⏭️ ${data.message}`)
                   } else if (data.event_type === 'entry_point') {
                     addMessage(`🚀 ${data.message}`)
                   } else if (data.event_type === 'exit_point') {
                     addMessage(`📤 ${data.message}`)
                   } else if (data.event_type === 'performance_update') {
-                    // 優化績效更新邏輯，避免重複顯示
+                    // Optimize performance update logic, avoid duplicate display
                     let metrics = data.extra_data?.performance_metrics || (data as any).performance_metrics
                     let strategyStats = (data as any).strategy_statistics || (data.extra_data as any)?.strategy_statistics
                     
@@ -345,16 +345,16 @@ export default function StreamingLLMRunner() {
                       const prevTradeCount = dynamicPerformance.total_trades
                       const prevReturn = dynamicPerformance.total_return
                       
-                      // 只在交易數量真正增加時顯示交易完成訊息
+                      // Only show trade completion message when trade count actually increases
                       if (newTradeCount > prevTradeCount && newTradeCount > 0) {
                         const returnText = (newReturn * 100).toFixed(2)
                         const winRateText = (newWinRate * 100).toFixed(1)
-                        addMessage(`💰 交易完成 | 總回報: ${returnText}% | 勝率: ${winRateText}% | 完成交易: ${newTradeCount}筆`)
+                        addMessage(`💰 Trade Complete | Total Return: ${returnText}% | Win Rate: ${winRateText}% | Completed Trades: ${newTradeCount}`)
                       } else if (newTradeCount === 0 && prevTradeCount === 0 && Math.abs(newReturn - prevReturn) > 0.05) {
-                        // 只有在真正有收益率大幅變化且無交易時，才顯示績效更新（避免無意義的0%更新）
+                        // Only show performance update when there's significant return change and no trades (avoid meaningless 0% updates)
                         const returnText = (newReturn * 100).toFixed(2)
                         const winRateText = (newWinRate * 100).toFixed(1)
-                        addMessage(`📊 績效更新 | 總回報: ${returnText}% | 勝率: ${winRateText}%`)
+                        addMessage(`📊 Performance Update | Total Return: ${returnText}% | Win Rate: ${winRateText}%`)
                       }
                       
                       setDynamicPerformance({
@@ -367,12 +367,12 @@ export default function StreamingLLMRunner() {
                       })
                     }
                     
-                    // P&L狀態已在上方統一更新，此處不再重複更新
+                    // P&L status already updated above, no need to repeat here
                   } else {
-                    // 過濾系統訊息，只顯示重要內容
+                    // Filter system messages, only show important content
                     const message = data.message || ''
-                    if (!message.includes('處理進度') && 
-                        !message.includes('開始LLM分析') && 
+                    if (!message.includes('Processing progress') && 
+                        !message.includes('Starting LLM analysis') && 
                         message.trim() !== '') {
                       addMessage(message)
                     }
@@ -383,66 +383,66 @@ export default function StreamingLLMRunner() {
               case 'result':
               setResult(data.data)
               
-              // 設置完整的股票數據用於圖表
+              // Set complete stock data for chart
               if (data.data.stock_data) {
                 setRealTimeStockData(data.data.stock_data)
               }
               
-              // 更新最終performance數據，優先使用statistics中的策略統計數據
+              // Update final performance data, prioritize strategy statistics from statistics
               const finalStrategyStats = data.data.strategy_statistics || {}
               const finalPerformance = data.data.performance || {}
               const finalStatistics = data.data.statistics || {}
               
               setDynamicPerformance({
                 total_return: finalStatistics.total_return || finalPerformance.total_return || 0,
-                win_rate: finalStatistics.win_rate / 100 || finalStrategyStats.strategy_win_rate || finalPerformance.win_rate || 0, // 轉換百分比為小數
+                win_rate: finalStatistics.win_rate / 100 || finalStrategyStats.strategy_win_rate || finalPerformance.win_rate || 0, // Convert percentage to decimal
                 max_drawdown: finalStatistics.max_drawdown || finalPerformance.max_drawdown || 0,
                 total_trades: finalStatistics.total_trades || finalStrategyStats.total_trades || 0,
                 total_realized_pnl: finalStatistics.total_realized_pnl || finalStrategyStats.total_realized_pnl || 0,
-                cumulative_trade_return_rate: finalStatistics.total_return / 100 || finalStrategyStats.cumulative_trade_return_rate || 0 // 使用總回報率作為累積交易收益率
+                cumulative_trade_return_rate: finalStatistics.total_return / 100 || finalStrategyStats.cumulative_trade_return_rate || 0 // Use total return as cumulative trade return
               })
               
-              addMessage('✅ 回測完成，正在生成圖表...')
+              addMessage('✅ Backtest complete, generating charts...')
               break
               
             case 'complete':
-              // 只顯示完成訊息，不顯示可能不準確的數據總結
-              addMessage('🎉 回測完成！請查看下方圖卡獲取準確的統計數據')
-              addMessage(data.message || '所有處理完成！')
+              // Only show completion message, not potentially inaccurate data summary
+              addMessage('🎉 Backtest Complete! Check the cards below for accurate statistics')
+              addMessage(data.message || 'All processing complete!')
               setIsRunning(false)
               cleanupEventSource()
               break
               
             case 'error':
-              setError(data.message || '發生未知錯誤')
-              addMessage(`❌ 錯誤: ${data.message}`)
+              setError(data.message || 'Unknown error occurred')
+              addMessage(`❌ Error: ${data.message}`)
               setIsRunning(false)
               cleanupEventSource()
               break
           }
         } catch (err) {
-          console.error('解析串流數據錯誤:', err)
+          console.error('Stream data parsing error:', err)
         }
       }
       
       eventSourceRef.current.onerror = (event) => {
-        console.error('EventSource 錯誤:', event)
-        setError('連接中斷或伺服器錯誤')
+        console.error('EventSource error:', event)
+        setError('Connection interrupted or server error')
         setIsRunning(false)
         setIsStarting(false)
         cleanupEventSource()
       }
       
     } catch (err) {
-      console.error('啟動串流錯誤:', err)
-      setError('無法啟動串流回測')
+      console.error('Stream startup error:', err)
+      setError('Unable to start streaming backtest')
       setIsRunning(false)
       setIsStarting(false)
     }
   }
 
   const stopStreaming = () => {
-    console.log('手動停止串流')
+    console.log('Manually stopping stream')
     cleanupEventSource()
     setIsRunning(false)
     setIsStarting(false)
@@ -452,43 +452,43 @@ export default function StreamingLLMRunner() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold gradient-text mb-2">
-          🚀 串流式 LLM 策略回測
+          🚀 Streaming LLM Strategy Backtest
         </h1>
-        <p className="text-gray-600">即時觀看 AI 交易策略的決策過程</p>
+        <p className="text-gray-600">Watch AI trading strategy decisions in real-time</p>
       </div>
 
-      {/* 參數設置 */}
+      {/* Parameter Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="text-lg">📊</span>
-            回測參數設置
+            Backtest Parameters
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="symbol">股票代碼</Label>
+              <Label htmlFor="symbol">Stock Symbol</Label>
               <Input
                 id="symbol"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="例如: AAPL"
+                placeholder="e.g., AAPL"
                 disabled={isRunning}
               />
             </div>
             
             <div>
-              <Label htmlFor="period">回測期間</Label>
+              <Label htmlFor="period">Backtest Period</Label>
               <Select value={period} onValueChange={setPeriod} disabled={isRunning}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="6mo">6個月</SelectItem>
-                  <SelectItem value="1y">1年</SelectItem>
-                  <SelectItem value="2y">2年</SelectItem>
-                  <SelectItem value="5y">5年</SelectItem>
+                  <SelectItem value="6mo">6 Months</SelectItem>
+                  <SelectItem value="1y">1 Year</SelectItem>
+                  <SelectItem value="2y">2 Years</SelectItem>
+                  <SelectItem value="5y">5 Years</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -496,8 +496,8 @@ export default function StreamingLLMRunner() {
           
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
             <div className="text-sm text-blue-800">
-              <p className="font-medium">💰 資金模式：無上限資金</p>
-              <p className="text-xs mt-1">系統使用無上限資金模式，所有損益計算基於實際交易成本，不依賴初始資金設定</p>
+              <p className="font-medium">💰 Capital Mode: Unlimited</p>
+              <p className="text-xs mt-1">System uses unlimited capital mode, all P&L calculations based on actual trading costs, not dependent on initial capital setting</p>
             </div>
           </div>
           
@@ -510,12 +510,12 @@ export default function StreamingLLMRunner() {
               {(isRunning || isStarting) ? (
                 <>
                   <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  {isStarting ? '正在啟動...' : '回測進行中...'}
+                  {isStarting ? 'Starting...' : 'Backtest in Progress...'}
                 </>
               ) : (
                 <>
                   <span className="mr-2">▶</span>
-                  開始串流回測
+                  Start Streaming Backtest
                 </>
               )}
             </Button>
@@ -523,89 +523,89 @@ export default function StreamingLLMRunner() {
             {(isRunning || isStarting) && (
               <Button onClick={stopStreaming} variant="destructive">
                 <span className="mr-2">⏹</span>
-                停止
+                Stop
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* 進度顯示 */}
+      {/* Progress Display */}
       {isRunning && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <span className="text-lg">⚡</span>
-              即時進度與績效
+              Real-time Progress & Performance
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span>處理進度</span>
+                  <span>Processing Progress</span>
                   <span>{progress.toFixed(1)}%</span>
                 </div>
                 <Progress value={progress} className="w-full" />
               </div>
               
-              {/* 動態績效指標 */}
+              {/* Dynamic Performance Metrics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="text-center p-2 bg-green-50 rounded">
                   <div className="text-lg font-bold text-green-600">
                     {dynamicPerformance.total_trades}
                   </div>
-                  <div className="text-xs text-gray-600">已完成交易</div>
+                  <div className="text-xs text-gray-600">Completed Trades</div>
                 </div>
                 <div className="text-center p-2 bg-blue-50 rounded">
                   <div className="text-lg font-bold text-blue-600">
                     {(dynamicPerformance.win_rate * 100).toFixed(1)}%
                   </div>
-                  <div className="text-xs text-gray-600">策略勝率</div>
+                  <div className="text-xs text-gray-600">Strategy Win Rate</div>
                 </div>
                 <div className="text-center p-2 bg-purple-50 rounded">
                   <div className={`text-lg font-bold ${(dynamicPerformance.total_realized_pnl ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     ${(dynamicPerformance.total_realized_pnl ?? 0).toFixed(2)}
                   </div>
-                  <div className="text-xs text-gray-600">累積實現損益</div>
+                  <div className="text-xs text-gray-600">Cumulative Realized P&L</div>
                 </div>
                 <div className="text-center p-2 bg-orange-50 rounded">
                   <div className={`text-lg font-bold ${(dynamicPerformance.cumulative_trade_return_rate ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {((dynamicPerformance.cumulative_trade_return_rate ?? 0) * 100).toFixed(2)}%
                   </div>
-                  <div className="text-xs text-gray-600">累積交易收益率</div>
+                  <div className="text-xs text-gray-600">Cumulative Trade Return</div>
                 </div>
               </div>
               
-              {/* P&L 狀態顯示 */}
+              {/* P&L Status Display */}
               {pnlStatus && (
                 <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
                   <div className="text-sm font-semibold mb-3 flex items-center gap-2">
                     <span className="text-base">📈</span>
-                    當前交易狀態
+                    Current Trade Status
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className={`text-xl font-bold ${(pnlStatus.unrealized_pnl ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         ${(pnlStatus.unrealized_pnl ?? 0).toFixed(2)}
                       </div>
-                      <div className="text-xs text-gray-600">未實現損益</div>
+                      <div className="text-xs text-gray-600">Unrealized P&L</div>
                     </div>
                     <div className="text-center">
                       <div className={`text-xl font-bold ${(pnlStatus.unrealized_pnl_pct ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {(pnlStatus.unrealized_pnl_pct ?? 0).toFixed(2)}%
                       </div>
-                      <div className="text-xs text-gray-600">本次交易收益率</div>
+                      <div className="text-xs text-gray-600">Current Trade Return</div>
                     </div>
                     <div className="text-center">
                       <div className="text-xl font-bold text-blue-600">
-                        {pnlStatus.shares ? `${(pnlStatus.shares / 1000).toFixed(1)}k股` : '無持倉'}
+                        {pnlStatus.shares ? `${(pnlStatus.shares / 1000).toFixed(1)}k shares` : 'No Position'}
                       </div>
-                      <div className="text-xs text-gray-600">持股數量</div>
+                      <div className="text-xs text-gray-600">Shares Held</div>
                     </div>
                   </div>
                   <div className="mt-3 text-xs text-gray-500 text-center">
-                    風險等級: <span className={`font-semibold ${
+                    Risk Level: <span className={`font-semibold ${
                       pnlStatus.risk_level === 'high' ? 'text-red-600' : 
                       pnlStatus.risk_level === 'medium' ? 'text-yellow-600' : 'text-green-600'
                     }`}>{pnlStatus.risk_level ?? 'normal'}</span>
@@ -623,40 +623,40 @@ export default function StreamingLLMRunner() {
         </Card>
       )}
 
-      {/* 即時日誌 */}
+      {/* Real-time Log */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="text-lg">📈</span>
-            即時決策日誌
+            Real-time Decision Log
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg space-y-2">
             {messages.map((message, index) => {
-              // 根據訊息類型設定樣式
+              // Set style based on message type
               let messageClass = "text-sm p-3 rounded-md leading-relaxed"
               
-              if (message.includes('🤖') && message.includes('LLM決策')) {
-                // LLM決策訊息 - 特殊樣式，更大空間顯示完整內容
+              if (message.includes('🤖') && (message.includes('LLM Decision') || message.includes('LLM決策'))) {
+                // LLM decision message - special style, more space to display full content
                 messageClass += " bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900"
               } else if (message.includes('🟢') || message.includes('🚀')) {
-                // 買入相關訊息
+                // Buy related messages
                 messageClass += " bg-green-100 border-l-4 border-green-500 text-green-800"
               } else if (message.includes('🔴') || message.includes('📤')) {
-                // 賣出相關訊息  
+                // Sell related messages  
                 messageClass += " bg-red-100 border-l-4 border-red-500 text-red-800"
               } else if (message.includes('🟡')) {
-                // 持有相關訊息
+                // Hold related messages
                 messageClass += " bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800"
               } else if (message.includes('💰')) {
-                // 績效更新訊息
+                // Performance update messages
                 messageClass += " bg-blue-100 border-l-4 border-blue-500 text-blue-800 font-semibold"
-              } else if (message.includes('✅') || message.includes('完成')) {
-                // 完成訊息
+              } else if (message.includes('✅') || message.includes('Complete') || message.includes('完成')) {
+                // Completion messages
                 messageClass += " bg-purple-100 border-l-4 border-purple-500 text-purple-800"
               } else {
-                // 一般訊息
+                // General messages
                 messageClass += " bg-white border-l-4 border-gray-300 text-gray-700"
               }
               
